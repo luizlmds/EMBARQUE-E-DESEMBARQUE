@@ -474,7 +474,7 @@
           <h1>Relat&oacute;rio de Embarques</h1>
         </div>
         <div class="flex"></div>
-        <button class="btn" onclick="imprimirRelatorio()">&#128424; Imprimir</button>
+        <button class="btn" onclick="baixarRelatorioPDF()">&#128441; Baixar Relat&oacute;rio</button>
         <button class="btn" onclick="goHome()">Voltar</button>
       </div>
       <div id="relatorio-content" style="flex:1;overflow:auto;padding:20px;background:#fff;font-family:Arial,sans-serif;"></div>
@@ -719,6 +719,7 @@
 <div id="loading"><div class="spin"></div><div class="msg">Aguarde... Processando</div></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 /* ================= CONFIGURAÇÃO ================= */
 var SB_URL = 'https://lbzjcojhynvpguwebtnd.supabase.co';
@@ -1050,8 +1051,30 @@ function gerarRelatorio(){
   console.log('HTML gerado, exibindo...');
   $('relatorio-content').innerHTML = html;
 }
-function imprimirRelatorio(){
-  window.print();
+function baixarRelatorioPDF(){
+  var conteudo = $('relatorio-content').innerHTML;
+  if(!conteudo || conteudo.includes('Nenhum colaborador')){
+    alert('⚠️ Nenhum relatório para baixar!');
+    return;
+  }
+
+  var hoje = new Date();
+  var nomeArquivo = 'Relatorio-Rota-' + String(hoje.getDate()).padStart(2,'0') + String(hoje.getMonth()+1).padStart(2,'0') + hoje.getFullYear() + '.pdf';
+
+  var elemento = document.createElement('div');
+  elemento.innerHTML = '<h1 style="text-align:center;margin:20px 0;">RELATÓRIO DE ROTA - EMBARQUES</h1>' +
+                       '<p style="text-align:center;font-size:12px;">Data: ' + fmtBR(hoje.toISOString().split('T')[0]) + '</p>' +
+                       conteudo;
+
+  var opcoes = {
+    margin: 10,
+    filename: nomeArquivo,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+  };
+
+  html2pdf().set(opcoes).from(elemento).save();
 }
 function sideSearch(){
   var v=$('side-search').value;
