@@ -347,11 +347,15 @@
           <span class="leaf" onclick="goBrowse('todos')">Controle Embarque/Desemb.</span>
           <span class="leaf" onclick="goBrowse('PEND')">Reembarques Pendentes</span>
         </div>
+        <div class="tree-parent closed" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Embarque e Desembarque</div>
+        <div class="tree-kids">
+          <span class="leaf" onclick="goBrowse('todos')">Controle Geral</span>
+        </div>
         <div class="tree-parent closed" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Consultas (3)</div>
         <div class="tree-kids">
           <span class="leaf" onclick="goBrowse('EMB')">Embarcados</span>
-          <span class="leaf" onclick="goBrowse('DES')">Desembarcados</span>
           <span class="leaf" onclick="goBrowse('AEMB')">A Embarcar</span>
+          <span class="leaf" onclick="goBrowse('PEND')">Pendente de Embarque</span>
         </div>
         <div class="tree-parent closed" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Rota</div>
         <div class="tree-kids">
@@ -402,13 +406,19 @@
         </div>
       </div>
       <div class="home-sec">
+        <h2>Embarque e Desembarque</h2>
+        <div class="sub">Selecione a rotina na lista abaixo</div>
+        <div class="home-links">
+          <a onclick="goBrowse('todos')">Controle Geral</a>
+        </div>
+      </div>
+      <div class="home-sec">
         <h2>Consultas</h2>
         <div class="sub">Selecione a rotina na lista abaixo</div>
         <div class="home-links">
           <a onclick="goBrowse('EMB')">Colaboradores Embarcados</a>
-          <a onclick="goBrowse('DES')">Colaboradores Desembarcados</a>
           <a onclick="goBrowse('AEMB')">Embarques Programados</a>
-          <a onclick="goBrowse('todos')">Situa&ccedil;&atilde;o Geral</a>
+          <a onclick="goBrowse('PEND')">Pendente de Embarque</a>
         </div>
       </div>
     </div>
