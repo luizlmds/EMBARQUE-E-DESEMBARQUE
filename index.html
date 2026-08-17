@@ -373,6 +373,10 @@
             <span class="leaf" onclick="openDlg('dlg-import')">Importa&ccedil;&atilde;o de Ativo</span>
           </div>
         </div>
+        <div class="tree-parent" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Backup</div>
+        <div class="tree-kids">
+          <span class="leaf" onclick="exportarBackup()">&#128190; Exportar Dados</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1135,6 +1139,81 @@ function toggleEditMode(){
     alert('⚠️ Modo de edição DESATIVADO - sistema em visualização apenas');
   } else {
     alert('✅ Modo de edição ATIVADO - você pode editar normalmente');
+  }
+}
+function exportarBackup(){
+  if(typeof XLSX === 'undefined'){
+    loadXLSX(0);
+    setTimeout(function(){ exportarBackup(); }, 1000);
+    return;
+  }
+  loading(true);
+  try {
+    var workbook = XLSX.utils.book_new();
+
+    // Preparar dados dos colaboradores
+    var colabData = state.colabs.map(function(c){
+      var e = (c.embarques && c.embarques[0]) || {};
+      return {
+        'Matrícula': c.matricula || '',
+        'Nome': c.nome || '',
+        'Função': c.funcao || '',
+        'CC': c.cc || '',
+        'Back': c.back || '',
+        'Turma': c.turma || '',
+        'Escala': c.escala || '',
+        'Data Embarque': e.data_embarque ? fmtBR(e.data_embarque) : '',
+        'Data Desembarque': e.data_desembarque ? fmtBR(e.data_desembarque) : '',
+        'Data Reembarque': e.data_reembarque ? fmtBR(e.data_reembarque) : '',
+        'Não Embarcou': c.nao_embarcou ? 'SIM' : 'NÃO',
+        'Sit. Folha': c.sit_folha || '',
+        'Observações': c.observacoes || '',
+        'CEP': c.cep || '',
+        'Logradouro': c.logradouro || '',
+        'Número': c.numero || '',
+        'Complemento': c.complemento || '',
+        'Bairro': c.bairro || '',
+        'Município': c.municipio || '',
+        'UF': c.uf || ''
+      };
+    });
+
+    var colabSheet = XLSX.utils.json_to_sheet(colabData);
+    XLSX.utils.book_append_sheet(workbook, colabSheet, 'Colaboradores');
+
+    // Preparar dados de embarques detalhados
+    var embData = [];
+    state.colabs.forEach(function(c){
+      if(c.embarques && c.embarques.length > 0){
+        c.embarques.forEach(function(e){
+          embData.push({
+            'Colaborador': c.nome || '',
+            'Matrícula': c.matricula || '',
+            'Data Embarque': e.data_embarque ? fmtBR(e.data_embarque) : '',
+            'Data Desembarque': e.data_desembarque ? fmtBR(e.data_desembarque) : '',
+            'Data Reembarque': e.data_reembarque ? fmtBR(e.data_reembarque) : '',
+            'Observação': e.observacao || ''
+          });
+        });
+      }
+    });
+
+    if(embData.length > 0){
+      var embSheet = XLSX.utils.json_to_sheet(embData);
+      XLSX.utils.book_append_sheet(workbook, embSheet, 'Embarques');
+    }
+
+    // Gerar arquivo
+    var dataHoje = new Date();
+    var nomeArquivo = 'Backup_Embarque_'+dataHoje.getFullYear()+(dataHoje.getMonth()+1).toString().padStart(2,'0')+dataHoje.getDate().toString().padStart(2,'0')+'.xlsx';
+    XLSX.writeFile(workbook, nomeArquivo);
+
+    loading(false);
+    toast('✅ Backup exportado com sucesso: '+nomeArquivo);
+  } catch(err){
+    loading(false);
+    console.error('Erro ao exportar:', err);
+    toast('Erro ao gerar backup: '+err.message, true);
   }
 }
 function toggleTree(el){ el.classList.toggle('closed'); }
