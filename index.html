@@ -360,6 +360,7 @@
         </div>
         <div class="tree-parent" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Miscel&acirc;nia</div>
         <div class="tree-kids">
+          <span class="leaf" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="chk-edit-mode" checked onchange="toggleEditMode()" style="cursor:pointer;"><label for="chk-edit-mode" style="cursor:pointer;flex:1;">Modo Edi&ccedil;&atilde;o</label></span>
           <div class="tree-parent" onclick="toggleTree(this)"><span class="caret">&#9660;</span>Importa&ccedil;&atilde;o</div>
           <div class="tree-kids">
             <span class="leaf" onclick="openDlg('dlg-import')">Importa&ccedil;&atilde;o de Ativo</span>
@@ -734,7 +735,7 @@ var ST = {
   SEM:  {label:'SEM PROGRAM.',     cor:'var(--cinza-st)',    hex:'#9e9e9e'}
 };
 
-var state = { colabs: [], sel: null, editId: null, embEditId: null, embColab: null, histOpenId: null, online: true };
+var state = { colabs: [], sel: null, editId: null, embEditId: null, embColab: null, histOpenId: null, online: true, editMode: true };
 
 /* ================= UTILITÁRIOS ================= */
 function $(id){ return document.getElementById(id); }
@@ -1057,6 +1058,14 @@ function sideSearch(){
   $('f-q').value=v; $('f-sit').value='todos';
   goBrowse();
 }
+function toggleEditMode(){
+  state.editMode = $('chk-edit-mode').checked;
+  if(!state.editMode){
+    alert('⚠️ Modo de edição DESATIVADO - sistema em visualização apenas');
+  } else {
+    alert('✅ Modo de edição ATIVADO - você pode editar normalmente');
+  }
+}
 function toggleTree(el){ el.classList.toggle('closed'); }
 
 /* ================= DIÁLOGO COLABORADOR ================= */
@@ -1069,6 +1078,11 @@ function setColabDisabled(dis){
   if(dis){ $('c-diasemb').disabled=true; $('c-diasfolga').disabled=true; }
 }
 function openColab(modo){
+  if(!state.editMode && modo !== 'ver'){
+    alert('⚠️ Modo de edição desativado! Você só pode visualizar.');
+    if(selecionado()) openColab('ver');
+    return;
+  }
   var c=null;
   if(modo!=='inc'){ c=selecionado(); if(!c) return; }
   state.editId = (modo==='inc') ? null : c.id;
