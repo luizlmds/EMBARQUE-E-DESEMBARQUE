@@ -178,6 +178,11 @@
     display:inline-block;padding:2px 9px;border-radius:2px;font-size:10.5px;font-weight:700;
     color:#fff;letter-spacing:.4px;
   }
+  table.browse select{
+    width:100%;border:1px solid #b8b8b8;border-radius:2px;padding:3px 4px;
+    font-size:12px;color:#444;background:#fff;outline:none;font-family:inherit;cursor:pointer;
+  }
+  table.browse select:focus{border-color:var(--azul);}
   .st-detail{font-size:11px;color:#888;margin-top:2px;white-space:nowrap;}
   .empty-state{padding:40px;text-align:center;color:#999;font-size:13px;}
 
@@ -413,7 +418,7 @@
         <div class="flex"></div>
         <div class="filters">
           <label>CC</label>
-          <input id="f-cc" type="text" placeholder="CC (4 d&iacute;gitos)" maxlength="4" oninput="render()" style="width:100px;">
+          <select id="f-cc" onchange="render()" style="width:100px;"><option value="">Todos</option></select>
           <label>Situa&ccedil;&atilde;o</label>
           <select id="f-sit" onchange="render()">
             <option value="todos">Todas</option>
@@ -444,6 +449,7 @@
               <th>Dt. Desembarque</th>
               <th>Dt. Reembarque</th>
               <th>N&atilde;o Embarcou</th>
+              <th>Sit. Folha</th>
               <th>Situa&ccedil;&atilde;o</th>
               <th>Observa&ccedil;&otilde;es</th>
             </tr>
@@ -798,6 +804,7 @@ function load(){
       state.colabs = data || [];
       state.online = true;
       $('conn-error').style.display='none';
+      updateCCFilter();
       render();
       if(state.histOpenId){ var c=byId(state.histOpenId); if(c){ fillHist(c,false); } else { closeDlg('dlg-colab'); } }
     })
@@ -810,6 +817,23 @@ function load(){
       toast('Falha de conexão com o banco de dados', true);
     })
     .then(function(){ loading(false); });
+}
+function updateCCFilter(){
+  var ccs = {};
+  state.colabs.forEach(function(c){
+    if(c.cc) ccs[c.cc] = true;
+  });
+  var ccList = Object.keys(ccs).sort();
+  var sel = $('f-cc');
+  var currentValue = sel.value;
+  sel.innerHTML = '<option value="">Todos</option>';
+  ccList.forEach(function(cc){
+    var opt = document.createElement('option');
+    opt.value = cc;
+    opt.textContent = cc;
+    sel.appendChild(opt);
+  });
+  sel.value = currentValue;
 }
 function byId(id){ for(var i=0;i<state.colabs.length;i++){ if(state.colabs[i].id===id) return state.colabs[i]; } return null; }
 
@@ -834,7 +858,7 @@ function statusInfo(c){
 
 /* ================= RENDER ================= */
 function render(){
-  var sit=$('f-sit').value, turma=$('f-turma').value, cc=$('f-cc').value.trim(), q=$('f-q').value.trim().toUpperCase();
+  var sit=$('f-sit').value, turma=$('f-turma').value, cc=$('f-cc').value, q=$('f-q').value.trim().toUpperCase();
 
   var colabsOrdenados = state.colabs.slice().sort(function(a, b){
     var backA = a.back || 999999;
@@ -870,6 +894,7 @@ function render(){
       +'<td>'+fmtBR(e?e.data_desembarque:null)+'</td>'
       +'<td>'+fmtBR(e?e.data_reembarque:null)+'</td>'
       +'<td style="text-align:center;"><input type="checkbox" class="chk-nao-embarcou" data-colab="'+c.id+'" '+(c.nao_embarcou?'checked':'')+' onchange="marcarNaoEmbarcou(this, \''+c.id+'\')"></td>'
+      +'<td><select class="sel-sit-folha" data-colab="'+c.id+'" onchange="salvarSitFolha(this, \''+c.id+'\')"><option value="">—</option><option value="AFASTADO INSS" '+(c.sit_folha==='AFASTADO INSS'?'selected':'')+'>AFASTADO INSS</option><option value="FÉRIAS" '+(c.sit_folha==='FÉRIAS'?'selected':'')+'>FÉRIAS</option></select></td>'
       +'<td><span class="badge" style="background:'+st.hex+';">'+st.label+'</span><div class="st-detail">'+si.detalhe+'</div></td>'
       +'<td style="cursor:pointer;" ondblclick="editarObs(this, '+c.id+')"><span class="obs-text">'+esc(c.observacoes||'—')+'</span></td>'
       +'</tr>';
@@ -911,6 +936,27 @@ function marcarNaoEmbarcou(checkbox, colabId){
       loading(false);
       toast('Erro ao salvar: '+err.message, true);
       checkbox.checked = !marcado;
+    });
+}
+function salvarSitFolha(select, colabId){
+  var c = byId(colabId);
+  if(!c) return;
+  var novoValor = select.value || null;
+  loading(true);
+  console.log('Salvando sit_folha:', novoValor, 'para colaborador:', colabId);
+  api('colaboradores?id=eq.'+colabId, {method:'PATCH', body:{sit_folha: novoValor}})
+    .then(function(){
+      console.log('Sucesso ao salvar sit_folha');
+      c.sit_folha = novoValor;
+      loading(false);
+      toast('Situação folha atualizada com sucesso');
+      render();
+    })
+    .catch(function(err){
+      console.log('Erro ao salvar sit_folha:', err);
+      loading(false);
+      toast('Erro ao salvar: '+err.message, true);
+      select.value = c.sit_folha || '';
     });
 }
 function editarObs(td, colabId){
