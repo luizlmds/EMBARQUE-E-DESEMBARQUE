@@ -179,10 +179,12 @@
     color:#fff;letter-spacing:.4px;
   }
   table.browse select{
-    width:100%;border:1px solid #b8b8b8;border-radius:2px;padding:3px 4px;
+    width:100%;min-width:130px;border:1px solid #b8b8b8;border-radius:2px;padding:3px 4px;
     font-size:12px;color:#444;background:#fff;outline:none;font-family:inherit;cursor:pointer;
   }
   table.browse select:focus{border-color:var(--azul);}
+  table.browse select.sel-sit-folha.sit-folha-AFASTADO\ INSS{background-color:#fff3cd;color:#856404;border-color:#ffc107;}
+  table.browse select.sel-sit-folha.sit-folha-FÉRIAS{background-color:#cfe2ff;color:#084298;border-color:#0d6efd;}
   .st-detail{font-size:11px;color:#888;margin-top:2px;white-space:nowrap;}
   .empty-state{padding:40px;text-align:center;color:#999;font-size:13px;}
 
@@ -894,7 +896,7 @@ function render(){
       +'<td>'+fmtBR(e?e.data_desembarque:null)+'</td>'
       +'<td>'+fmtBR(e?e.data_reembarque:null)+'</td>'
       +'<td style="text-align:center;"><input type="checkbox" class="chk-nao-embarcou" data-colab="'+c.id+'" '+(c.nao_embarcou?'checked':'')+' onchange="marcarNaoEmbarcou(this, \''+c.id+'\')"></td>'
-      +'<td><select class="sel-sit-folha" data-colab="'+c.id+'" onchange="salvarSitFolha(this, \''+c.id+'\')"><option value="">—</option><option value="AFASTADO INSS" '+(c.sit_folha==='AFASTADO INSS'?'selected':'')+'>AFASTADO INSS</option><option value="FÉRIAS" '+(c.sit_folha==='FÉRIAS'?'selected':'')+'>FÉRIAS</option></select></td>'
+      +'<td><select class="sel-sit-folha sit-folha-'+(c.sit_folha||'vazio')+'" data-colab="'+c.id+'" onchange="salvarSitFolha(this, \''+c.id+'\')"><option value="">—</option><option value="AFASTADO INSS" '+(c.sit_folha==='AFASTADO INSS'?'selected':'')+'>AFASTADO INSS</option><option value="FÉRIAS" '+(c.sit_folha==='FÉRIAS'?'selected':'')+'>FÉRIAS</option></select></td>'
       +'<td><span class="badge" style="background:'+st.hex+';">'+st.label+'</span><div class="st-detail">'+si.detalhe+'</div></td>'
       +'<td style="cursor:pointer;" ondblclick="editarObs(this, '+c.id+')"><span class="obs-text">'+esc(c.observacoes||'—')+'</span></td>'
       +'</tr>';
