@@ -616,6 +616,12 @@
           </div>
           <div class="calc-info" id="preview-ciclo" style="display:none;"></div>
         </div>
+        <div class="frow" style="grid-template-columns:1fr;margin-top:16px;padding-top:16px;border-top:1px solid #ddd;">
+          <div class="fld" style="display:flex;align-items:center;gap:8px;">
+            <input id="c-precisa-rota" type="checkbox" checked>
+            <label style="margin:0;cursor:pointer;" onclick="document.getElementById('c-precisa-rota').checked = !document.getElementById('c-precisa-rota').checked">Precisa de Rota?</label>
+          </div>
+        </div>
       </div>
       <div id="tab-hist" style="display:none;">
         <table class="hist">
@@ -1075,6 +1081,7 @@ function gerarRelatorio(){
     var si = statusInfo(c);
     console.log(c.nome + ' - Status: ' + si.code);
     if(si.code !== 'AEMB') return;
+    if(c.precisa_rota === false) return;
     countAemb++;
     var e = (c.embarques && c.embarques[0]) || null;
     if(!e || !e.data_embarque){
@@ -1278,6 +1285,7 @@ function openColab(modo){
   $('c-diasemb').value = c?c.dias_embarcado:12;
   $('c-diasfolga').value = c?c.dias_folga:8;
   $('c-priemb').value='';
+  $('c-precisa-rota').checked = c?(c.precisa_rota !== false):true;
   $('preview-ciclo').style.display='none';
   $('box-priemb').style.display = (modo==='inc')?'block':'none';
 
@@ -1352,6 +1360,7 @@ function salvarColab(){
     escala: (escSel==='PERS') ? (N+'x'+M) : escSel,
     dias_embarcado: N,
     dias_folga: M,
+    precisa_rota: $('c-precisa-rota').checked,
     cep: $('c-cep').value.trim()||null,
     logradouro: ($('c-logradouro').value||'').trim().toUpperCase()||null,
     numero: $('c-numero').value.trim()||null,
