@@ -443,6 +443,7 @@
             <option value="AEMB">A embarcar</option>
             <option value="PEND">Reembarque pendente</option>
             <option value="SEM">Sem programa&ccedil;&atilde;o</option>
+            <option value="TRANS">Em translado</option>
           </select>
           <label>Turma</label>
           <select id="f-turma" onchange="render()"><option value="">Todas</option><option value="1A">1A</option><option value="1B">1B</option><option value="2A">2A</option><option value="2B">2B</option></select>
@@ -767,7 +768,8 @@ var ST = {
   AEMB: {label:'A EMBARCAR',       cor:'var(--amarelo-st)',  hex:'#e5a800'},
   PEND: {label:'REEMB. PENDENTE',  cor:'var(--azul-st)',     hex:'#2563eb'},
   NAEMB: {label:'NÃO EMBARCOU',    cor:'#a64942',            hex:'#a64942'},
-  SEM:  {label:'SEM PROGRAM.',     cor:'var(--cinza-st)',    hex:'#9e9e9e'}
+  SEM:  {label:'SEM PROGRAM.',     cor:'var(--cinza-st)',    hex:'#9e9e9e'},
+  TRANS: {label:'EM TRANSLADO',    cor:'var(--amarelo-pa)',  hex:'#eaa837'}
 };
 
 var state = { colabs: [], sel: null, editId: null, embEditId: null, embColab: null, histOpenId: null, online: true, editMode: true };
@@ -805,14 +807,20 @@ function confirmDlg(msg, fn){
 /* ================= API SUPABASE ================= */
 function api(path, opts){
   opts = opts || {};
+  var timeout = opts.timeout || 15000; // 15 second timeout
   function go(withAuth){
     var h = { 'apikey': SB_KEY, 'Content-Type': 'application/json', 'Prefer': opts.prefer || '' };
     if(withAuth){ h['Authorization'] = 'Bearer '+SB_KEY; }
-    return fetch(SB_URL+'/rest/v1/'+path, {
-      method: opts.method || 'GET',
-      headers: h,
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
+    return Promise.race([
+      fetch(SB_URL+'/rest/v1/'+path, {
+        method: opts.method || 'GET',
+        headers: h,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      }),
+      new Promise(function(_, reject){
+        setTimeout(function(){ reject(new Error('Timeout na conexão com Supabase')); }, timeout);
+      })
+    ]);
   }
   return go(true).then(function(res){
     if(res.status===401){ return go(false); }
@@ -826,17 +834,23 @@ function api(path, opts){
 /* ================= CARGA E STATUS ================= */
 function load(){
   loading(true);
+  console.log('[LOAD] Iniciando carregamento de dados...');
+  console.log('[LOAD] Chamando API: colaboradores?select=*,embarques(*)&order=nome.asc');
   return api('colaboradores?select=*,embarques(*)&order=nome.asc')
     .then(function(data){
+      console.log('[LOAD] ✓ Dados recebidos. Total de colaboradores:', (data||[]).length);
       (data||[]).forEach(function(c){ (c.embarques||[]).sort(function(a,b){ return b.data_embarque.localeCompare(a.data_embarque); }); });
       state.colabs = data || [];
       state.online = true;
       $('conn-error').style.display='none';
+      console.log('[LOAD] Atualizando filtros e renderizando...');
       updateCCFilter();
       render();
+      console.log('[LOAD] ✓ Renderização completa');
       if(state.histOpenId){ var c=byId(state.histOpenId); if(c){ fillHist(c,false); } else { closeDlg('dlg-colab'); } }
     })
     .catch(function(err){
+      console.error('[LOAD] ✗ Erro ao carregar dados:', err);
       state.online = false;
       var ce=$('conn-error');
       ce.innerHTML='Não foi possível conectar ao banco de dados ('+esc(err.message)+'). Abra o sistema pelo endereço publicado: <a href="'+PUB_URL+'" target="_blank">'+PUB_URL+'</a>';
@@ -844,7 +858,10 @@ function load(){
       render();
       toast('Falha de conexão com o banco de dados', true);
     })
-    .then(function(){ loading(false); });
+    .then(function(){
+      console.log('[LOAD] Desativando loading spinner');
+      loading(false);
+    });
 }
 function updateCCFilter(){
   var ccs = {};
@@ -874,10 +891,12 @@ function statusInfo(c){
     return { code:'AEMB', e:e, detalhe:'Embarca em '+fmtBR(e.data_embarque)+' (faltam '+diffDays(h,e.data_embarque)+' dia(s))' };
   }
   if(h <= e.data_desembarque){
-    var dia = diffDays(e.data_embarque,h)+1, tot = diffDays(e.data_embarque,e.data_desembarque)+1;
-    var code = (dia === 1 || dia === 12) ? 'TRANS' : 'EMB';
-    var detalhe = (dia === 1 || dia === 12) ? 'Em translado ('+dia+'º dia)' : dia+'º dia a bordo de '+tot+' • desembarca em '+fmtBR(e.data_desembarque);
-    return { code:code, e:e, detalhe: detalhe };
+    var dia = diffDays(e.data_embarque,h)+1;
+    var tot = diffDays(e.data_embarque,e.data_desembarque)+1;
+    var isTranslado = (dia===1 || dia===12);
+    var code = isTranslado ? 'TRANS' : 'EMB';
+    var detalhe = isTranslado ? 'Em translado ('+dia+'º dia)' : dia+'º dia a bordo de '+tot+' • desembarca em '+fmtBR(e.data_desembarque);
+    return {code:code, e:e, detalhe:detalhe};
   }
   if(h < e.data_reembarque){
     var df = diffDays(e.data_desembarque,h), tf = diffDays(e.data_desembarque,e.data_reembarque)-1;
@@ -1944,36 +1963,41 @@ document.addEventListener('keydown', function(ev){
 $('data-hoje').textContent = fmtBR(hoje());
 load();
 
-// Carregar biblioteca XLSX com múltiplos CDNs
+// Carregar biblioteca XLSX com múltiplos CDNs (lazy loading)
 var xlsxLoaded = false;
 var xlsxCDNs = [
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js',
-  'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  'https://cdn.jsdelivr.net/npm/xlsx@0.16.9/dist/xlsx.full.min.js',
+  'https://unpkg.com/xlsx@0.16.9/dist/xlsx.full.min.js'
 ];
 
 function loadXLSX(cdnIndex){
   if(xlsxLoaded || typeof XLSX !== 'undefined') return;
   if(cdnIndex >= xlsxCDNs.length){
-    console.error('Não foi possível carregar XLSX de nenhum CDN');
+    console.warn('Não foi possível carregar XLSX de nenhum CDN - algumas funcionalidades ficarão desabilitadas');
     return;
   }
 
-  var script=document.createElement('script');
-  script.src=xlsxCDNs[cdnIndex];
-  script.onload=function(){
-    xlsxLoaded=true;
-    console.log('✓ XLSX carregado de: '+xlsxCDNs[cdnIndex]);
-  };
-  script.onerror=function(){
-    console.warn('CDN '+cdnIndex+' falhou, tentando próximo...');
-    loadXLSX(cdnIndex+1);
-  };
-  script.timeout=5000;
-  document.body.appendChild(script);
+  try {
+    var script=document.createElement('script');
+    script.src=xlsxCDNs[cdnIndex];
+    script.onload=function(){
+      xlsxLoaded=true;
+      console.log('✓ XLSX carregado de: '+xlsxCDNs[cdnIndex]);
+    };
+    script.onerror=function(){
+      console.warn('CDN '+cdnIndex+' falhou, tentando próximo...');
+      loadXLSX(cdnIndex+1);
+    };
+    script.timeout=5000;
+    script.async=true;
+    document.head.appendChild(script);
+  } catch(err){
+    console.error('Erro ao carregar XLSX:', err);
+  }
 }
 
-loadXLSX(0);
+// Carregar XLSX apenas quando necessário
+setTimeout(function(){ loadXLSX(0); }, 2000);
 </script>
 </body>
 </html>
