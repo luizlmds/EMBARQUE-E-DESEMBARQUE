@@ -875,7 +875,9 @@ function statusInfo(c){
   }
   if(h <= e.data_desembarque){
     var dia = diffDays(e.data_embarque,h)+1, tot = diffDays(e.data_embarque,e.data_desembarque)+1;
-    return { code:'EMB', e:e, detalhe: dia+'º dia a bordo de '+tot+' • desembarca em '+fmtBR(e.data_desembarque) };
+    var code = (dia === 1 || dia === 12) ? 'TRANS' : 'EMB';
+    var detalhe = (dia === 1 || dia === 12) ? 'Em translado ('+dia+'º dia)' : dia+'º dia a bordo de '+tot+' • desembarca em '+fmtBR(e.data_desembarque);
+    return { code:code, e:e, detalhe: detalhe };
   }
   if(h < e.data_reembarque){
     var df = diffDays(e.data_desembarque,h), tf = diffDays(e.data_desembarque,e.data_reembarque)-1;
@@ -895,7 +897,7 @@ function render(){
     return (a.nome||'').localeCompare(b.nome||'');
   });
 
-  var counts={EMB:0,DES:0,AEMB:0,PEND:0,NAEMB:0,SEM:0};
+  var counts={EMB:0,DES:0,AEMB:0,PEND:0,NAEMB:0,SEM:0,TRANS:0};
   var rows='', shown=0;
   colabsOrdenados.forEach(function(c){
     var si=statusInfo(c);
